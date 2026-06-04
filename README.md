@@ -53,13 +53,14 @@ Add to your project's root `Cargo.toml`:
 ```toml
 [workspace.metadata.dylint]
 libraries = [
-    { git = "https://github.com/nilswloewen/nils-dylint", pattern = "blank_line_before_return" },
+    { git = "https://github.com/nilswloewen/nils-dylint", branch = "master", pattern = "blank_line_before_return" },
 ]
 ```
 
-`pattern` is the lint crate's directory name inside this repo. To pin to a
-specific revision (recommended for reproducibility — `rustc_private` APIs
-drift between nightlies):
+`pattern` is the lint crate's directory name inside this repo. The default
+branch of this repo is `master` (not `main`). To pin to a specific revision
+instead (recommended for reproducibility — `rustc_private` APIs drift
+between nightlies):
 
 ```toml
 { git = "https://github.com/nilswloewen/nils-dylint", rev = "<commit-sha>", pattern = "blank_line_before_return" },
