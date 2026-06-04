@@ -69,5 +69,15 @@ help: insert a blank line
 LL -     compute() // WARN
    |
 
-warning: 7 warnings emitted
+warning: missing blank line before the trailing return expression
+  --> $DIR/return_styles.rs:116:5
+   |
+LL |     (a, b) // WARN — function-body tail, no blank line above
+   |     ^^^^^^
+   |
+help: insert a blank line
+LL -     (a, b) // WARN — function-body tail, no blank line above
+   |
+
+warning: 8 warnings emitted
 

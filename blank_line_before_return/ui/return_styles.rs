@@ -106,6 +106,16 @@ fn returns_closure() -> impl Fn() -> i32 {
     move || n // ok — closure tail
 }
 
+// 14b. Block expression used as a `let` initializer — also skipped.
+fn let_init_block() -> (i32, i32) {
+    let n = compute();
+    let (a, b) = {
+        let doubled = n * 2;
+        (doubled, doubled + 1) // ok — inside a let-init block
+    };
+    (a, b) // WARN — function-body tail, no blank line above
+}
+
 // 15. Inside `if`/`else` branch bodies the lint is silenced. The construct
 //     itself brackets the code, so the blank line is noise.
 fn if_else_bodies() -> i32 {

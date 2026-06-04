@@ -56,16 +56,17 @@ impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
             return;
         }
 
-        // Don't lint inside control-flow construct bodies — match arms,
-        // closure bodies, and `if`/`else` branches. Blank-line padding inside
-        // those reads as noise, not as visual separation of a return value:
-        // the construct itself already brackets the code visually.
+        // Don't lint inside block expressions that aren't function bodies —
+        // match arms, closure bodies, `if`/`else` branches, and `let` init
+        // blocks (`let x = { … };`). Blank-line padding inside those reads
+        // as noise: the construct itself already brackets the code visually.
         //
-        // Walk: Block → wrapping Expr (`ExprKind::Block`) → that Expr's parent,
-        // which is the Arm / Closure expr / If expr we want to detect.
+        // Walk: Block → wrapping Expr (`ExprKind::Block`) → that Expr's
+        // parent, which is the Arm / Closure expr / If expr / LetStmt we
+        // want to detect.
         if let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id) {
             let grandparent = cx.tcx.parent_hir_node(parent_expr.hir_id);
-            if matches!(grandparent, Node::Arm(_)) {
+            if matches!(grandparent, Node::Arm(_) | Node::LetStmt(_)) {
                 return;
             }
             if let Node::Expr(gp_expr) = grandparent
