@@ -98,6 +98,33 @@ fn after_macro_stmt() -> i32 {
     compute() // WARN
 }
 
+// 14. Closure as the tail expression of a block — exempt. Factory-style
+//     "build a closure" blocks shouldn't be visually re-flowed.
+fn returns_closure() -> impl Fn() -> i32 {
+    let n = compute();
+    move || n // ok — closure tail
+}
+
+// 15. Inside match-arm bodies the lint is silenced, even when the arm's tail
+//     has no blank line above it — matches the user's preferred style for
+//     dense arm lists.
+fn match_arm_bodies() -> Result<i32, &'static str> {
+    let n = compute();
+    match n {
+        0 => {
+            let _shadow = n;
+            Ok(0) // ok — inside a match arm
+        }
+        _ => match n.signum() {
+            1 => {
+                let _shadow = n;
+                Ok(n) // ok — inside a nested match arm
+            }
+            _ => Err("negative"),
+        },
+    }
+}
+
 fn compute() -> i32 {
     0
 }

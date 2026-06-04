@@ -6,7 +6,7 @@ extern crate rustc_hir;
 
 use clippy_utils::diagnostics::span_lint_and_then;
 use rustc_errors::Applicability;
-use rustc_hir::Block;
+use rustc_hir::{Block, ExprKind, Node};
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 
 dylint_linting::declare_late_lint! {
@@ -48,6 +48,22 @@ impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
         }
         let Some(tail) = block.expr else { return };
         let Some(prev) = block.stmts.last() else { return };
+
+        // A closure as the tail expression is a value-producing factory pattern
+        // (`{ let helper = …; move |args| helper.use(args) }`), not a "return
+        // value" the eye needs separating — leave those alone.
+        if matches!(tail.kind, ExprKind::Closure(_)) {
+            return;
+        }
+
+        // Don't lint inside match arm bodies — blank-line padding inside each
+        // arm makes the arm list noisy. The block here is wrapped by an Expr
+        // (`ExprKind::Block`) whose parent is the `Arm`.
+        if let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id)
+            && matches!(cx.tcx.parent_hir_node(parent_expr.hir_id), Node::Arm(_))
+        {
+            return;
+        }
 
         // `source_callsite()` walks out of any macro expansion to the user-visible
         // call site, so macro-call statements (`println!(…);`) and macro-produced
