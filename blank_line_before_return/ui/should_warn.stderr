@@ -1,0 +1,63 @@
+warning: missing blank line before the trailing return expression
+  --> $DIR/should_warn.rs:6:5
+   |
+LL |     x
+   |     ^
+   |
+   = note: `#[warn(blank_line_before_return)]` on by default
+help: insert a blank line
+LL -     x
+   |
+
+warning: missing blank line before the trailing return expression
+  --> $DIR/should_warn.rs:11:5
+   |
+LL |     42
+   |     ^^
+   |
+help: insert a blank line
+LL -     42
+   |
+
+warning: missing blank line before the trailing return expression
+  --> $DIR/should_warn.rs:18:5
+   |
+LL |     7
+   |     ^
+   |
+help: insert a blank line
+LL -     7
+   |
+
+warning: missing blank line before the trailing return expression
+  --> $DIR/should_warn.rs:25:5
+   |
+LL |     2
+   |     ^
+   |
+help: insert a blank line
+LL -     2
+   |
+
+warning: missing blank line before the trailing return expression
+  --> $DIR/should_warn.rs:30:5
+   |
+LL |     (a, a + 1)
+   |     ^^^^^^^^^^
+   |
+help: insert a blank line
+LL -     (a, a + 1)
+   |
+
+warning: missing blank line before the trailing return expression
+  --> $DIR/should_warn.rs:37:9
+   |
+LL |         inner + outer
+   |         ^^^^^^^^^^^^^
+   |
+help: insert a blank line
+LL -         inner + outer
+   |
+
+warning: 6 warnings emitted
+
