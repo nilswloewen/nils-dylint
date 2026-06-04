@@ -70,7 +70,17 @@ LL -     compute() // WARN
    |
 
 warning: missing blank line before the trailing return expression
-  --> $DIR/return_styles.rs:116:5
+  --> $DIR/return_styles.rs:108:5
+   |
+LL |     move || n // WARN
+   |     ^^^^^^^^^
+   |
+help: insert a blank line
+LL -     move || n // WARN
+   |
+
+warning: missing blank line before the trailing return expression
+  --> $DIR/return_styles.rs:118:5
    |
 LL |     (a, b) // WARN — function-body tail, no blank line above
    |     ^^^^^^
@@ -79,5 +89,5 @@ help: insert a blank line
 LL -     (a, b) // WARN — function-body tail, no blank line above
    |
 
-warning: 8 warnings emitted
+warning: 9 warnings emitted
 

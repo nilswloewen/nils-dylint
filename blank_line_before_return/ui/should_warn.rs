@@ -30,12 +30,4 @@ fn tuple_tail() -> (i32, i32) {
     (a, a + 1)
 }
 
-fn nested_block_tail() -> i32 {
-    let outer = 10;
-    {
-        let inner = 1;
-        inner + outer
-    }
-}
-
 fn main() {}

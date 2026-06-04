@@ -40,4 +40,15 @@ fn returns_unit() {
     let _ = 1;
 }
 
+// The lint only fires on function bodies. The inner `{ … }` block here is the
+// fn's (multi-line) tail expression; its own inner tail isn't preceded by a
+// blank line, but it's not a function body so it's left alone.
+fn inner_block_skipped() -> i32 {
+    let outer = 10;
+    {
+        let inner = 1;
+        inner + outer
+    }
+}
+
 fn main() {}

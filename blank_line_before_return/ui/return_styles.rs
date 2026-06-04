@@ -99,11 +99,13 @@ fn after_macro_stmt() -> i32 {
     compute() // WARN
 }
 
-// 14. Closure as the tail expression of a block — exempt. Factory-style
-//     "build a closure" blocks shouldn't be visually re-flowed.
+// 14. A function that *returns* a closure is still a function body — the rule
+//     applies, the tail just happens to be a closure. (Distinct from a closure
+//     constructed inside an inner block, which is silenced because the inner
+//     block isn't a fn body — see #14b.)
 fn returns_closure() -> impl Fn() -> i32 {
     let n = compute();
-    move || n // ok — closure tail
+    move || n // WARN
 }
 
 // 14b. Block expression used as a `let` initializer — also skipped.

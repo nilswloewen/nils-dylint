@@ -49,15 +49,5 @@ help: insert a blank line
 LL -     (a, a + 1)
    |
 
-warning: missing blank line before the trailing return expression
-  --> $DIR/should_warn.rs:37:9
-   |
-LL |         inner + outer
-   |         ^^^^^^^^^^^^^
-   |
-help: insert a blank line
-LL -         inner + outer
-   |
-
-warning: 6 warnings emitted
+warning: 5 warnings emitted
 

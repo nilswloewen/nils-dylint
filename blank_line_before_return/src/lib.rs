@@ -6,20 +6,24 @@ extern crate rustc_hir;
 
 use clippy_utils::diagnostics::span_lint_and_then;
 use rustc_errors::Applicability;
-use rustc_hir::{Block, ExprKind, Node};
+use rustc_hir::{Block, ImplItemKind, ItemKind, Node, TraitFn, TraitItemKind};
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 
 dylint_linting::declare_late_lint! {
     /// ### What it does
-    /// Warns when a block's implicit tail-return expression fits on a single line and is
-    /// not preceded by a blank line.
+    /// Warns when a **function body**'s implicit tail-return expression fits on a
+    /// single line and is not preceded by a blank line.
     ///
-    /// Only implicit tail returns (the trailing expression of a block) are checked —
-    /// explicit `return x;` statements are left alone.
+    /// Only function bodies are checked — closure bodies, `if`/`else` branches,
+    /// `match` arms, `let`-initializer blocks (`let x = { … };`), and any other
+    /// inner block expressions are left alone. Explicit `return x;` is also out
+    /// of scope.
     ///
     /// ### Why is this bad?
-    /// A blank line above the tail expression makes the return value easier to spot when
-    /// scanning a function.
+    /// A blank line above the tail expression makes the function's return value
+    /// easier to spot when scanning. The same padding inside inner blocks reads
+    /// as noise — the enclosing construct (`|args|`, `if`, `match { … }`, the
+    /// `let` binding) already brackets the code visually.
     ///
     /// ### Example
     /// ```rust
@@ -38,7 +42,7 @@ dylint_linting::declare_late_lint! {
     /// ```
     pub BLANK_LINE_BEFORE_RETURN,
     Warn,
-    "single-line implicit return should be preceded by a blank line"
+    "function-body tail return should be preceded by a blank line"
 }
 
 impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
@@ -49,31 +53,8 @@ impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
         let Some(tail) = block.expr else { return };
         let Some(prev) = block.stmts.last() else { return };
 
-        // A closure as the tail expression is a value-producing factory pattern
-        // (`{ let helper = …; move |args| helper.use(args) }`), not a "return
-        // value" the eye needs separating — leave those alone.
-        if matches!(tail.kind, ExprKind::Closure(_)) {
+        if !is_fn_body(cx, block) {
             return;
-        }
-
-        // Don't lint inside block expressions that aren't function bodies —
-        // match arms, closure bodies, `if`/`else` branches, and `let` init
-        // blocks (`let x = { … };`). Blank-line padding inside those reads
-        // as noise: the construct itself already brackets the code visually.
-        //
-        // Walk: Block → wrapping Expr (`ExprKind::Block`) → that Expr's
-        // parent, which is the Arm / Closure expr / If expr / LetStmt we
-        // want to detect.
-        if let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id) {
-            let grandparent = cx.tcx.parent_hir_node(parent_expr.hir_id);
-            if matches!(grandparent, Node::Arm(_) | Node::LetStmt(_)) {
-                return;
-            }
-            if let Node::Expr(gp_expr) = grandparent
-                && matches!(gp_expr.kind, ExprKind::Closure(_) | ExprKind::If(..))
-            {
-                return;
-            }
         }
 
         // `source_callsite()` walks out of any macro expansion to the user-visible
@@ -118,6 +99,26 @@ impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
                 );
             },
         );
+    }
+}
+
+/// True when `block` is the top-level body of a function — a free `fn`, an
+/// inherent or trait-impl method, or a trait method with a default body.
+/// False for every other block context (closures, control-flow branches,
+/// `let` initializers, nested `{ … }` expressions, …).
+///
+/// Walk: Block → wrapping `ExprKind::Block` Expr → grandparent. For function
+/// bodies the grandparent is the `Fn` item, because `parent_hir_node` skips
+/// through the `Body` wrapper; for everything else it's an Expr/Arm/LetStmt.
+fn is_fn_body<'tcx>(cx: &LateContext<'tcx>, block: &Block<'_>) -> bool {
+    let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id) else {
+        return false;
+    };
+    match cx.tcx.parent_hir_node(parent_expr.hir_id) {
+        Node::Item(item) => matches!(item.kind, ItemKind::Fn { .. }),
+        Node::ImplItem(item) => matches!(item.kind, ImplItemKind::Fn(..)),
+        Node::TraitItem(item) => matches!(item.kind, TraitItemKind::Fn(_, TraitFn::Provided(_))),
+        _ => false,
     }
 }
 
