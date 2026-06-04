@@ -50,17 +50,7 @@ LL -     Ok(n as usize) // WARN
    |
 
 warning: missing blank line before the trailing return expression
-  --> $DIR/return_styles.rs:73:9
-   |
-LL |         x // WARN
-   |         ^
-   |
-help: insert a blank line
-LL -         x // WARN
-   |
-
-warning: missing blank line before the trailing return expression
-  --> $DIR/return_styles.rs:91:5
+  --> $DIR/return_styles.rs:92:5
    |
 LL |     () // WARN
    |     ^^
@@ -70,7 +60,7 @@ LL -     () // WARN
    |
 
 warning: missing blank line before the trailing return expression
-  --> $DIR/return_styles.rs:98:5
+  --> $DIR/return_styles.rs:99:5
    |
 LL |     compute() // WARN
    |     ^^^^^^^^^
@@ -79,5 +69,5 @@ help: insert a blank line
 LL -     compute() // WARN
    |
 
-warning: 8 warnings emitted
+warning: 7 warnings emitted
 

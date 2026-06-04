@@ -66,11 +66,12 @@ fn implicit_try() -> Result<usize, std::num::ParseIntError> {
     Ok(n as usize) // WARN
 }
 
-// 10. Closure body — also a block, also checked.
-fn closure_tail() {
+// 10. Closure body — skipped. Closure bodies are their own visual unit; the
+//     `|args|` prefix already brackets the block, so no blank-line padding.
+fn closure_body() {
     let _f = || {
         let x = 1;
-        x // WARN
+        x // ok — inside a closure body
     };
 }
 
@@ -105,7 +106,20 @@ fn returns_closure() -> impl Fn() -> i32 {
     move || n // ok — closure tail
 }
 
-// 15. Inside match-arm bodies the lint is silenced, even when the arm's tail
+// 15. Inside `if`/`else` branch bodies the lint is silenced. The construct
+//     itself brackets the code, so the blank line is noise.
+fn if_else_bodies() -> i32 {
+    let n = compute();
+    if n > 0 {
+        let doubled = n * 2;
+        doubled + 1 // ok — inside an if-then body
+    } else {
+        let abs = -n;
+        abs * 2 // ok — inside an else body
+    }
+}
+
+// 16. Inside match-arm bodies the lint is silenced, even when the arm's tail
 //     has no blank line above it — matches the user's preferred style for
 //     dense arm lists.
 fn match_arm_bodies() -> Result<i32, &'static str> {

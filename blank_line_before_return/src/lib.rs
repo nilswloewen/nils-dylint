@@ -56,13 +56,23 @@ impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
             return;
         }
 
-        // Don't lint inside match arm bodies — blank-line padding inside each
-        // arm makes the arm list noisy. The block here is wrapped by an Expr
-        // (`ExprKind::Block`) whose parent is the `Arm`.
-        if let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id)
-            && matches!(cx.tcx.parent_hir_node(parent_expr.hir_id), Node::Arm(_))
-        {
-            return;
+        // Don't lint inside control-flow construct bodies — match arms,
+        // closure bodies, and `if`/`else` branches. Blank-line padding inside
+        // those reads as noise, not as visual separation of a return value:
+        // the construct itself already brackets the code visually.
+        //
+        // Walk: Block → wrapping Expr (`ExprKind::Block`) → that Expr's parent,
+        // which is the Arm / Closure expr / If expr we want to detect.
+        if let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id) {
+            let grandparent = cx.tcx.parent_hir_node(parent_expr.hir_id);
+            if matches!(grandparent, Node::Arm(_)) {
+                return;
+            }
+            if let Node::Expr(gp_expr) = grandparent
+                && matches!(gp_expr.kind, ExprKind::Closure(_) | ExprKind::If(..))
+            {
+                return;
+            }
         }
 
         // `source_callsite()` walks out of any macro expansion to the user-visible
