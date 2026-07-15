@@ -6,7 +6,9 @@ extern crate rustc_hir;
 
 use clippy_utils::diagnostics::span_lint_and_then;
 use rustc_errors::Applicability;
-use rustc_hir::{Block, ImplItemKind, ItemKind, Node, TraitFn, TraitItemKind};
+use rustc_hir::{
+    Block, ClosureKind, Expr, ExprKind, ImplItemKind, ItemKind, Node, TraitFn, TraitItemKind,
+};
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 
 dylint_linting::declare_late_lint! {
@@ -47,9 +49,6 @@ dylint_linting::declare_late_lint! {
 
 impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
     fn check_block(&mut self, cx: &LateContext<'tcx>, block: &'tcx Block<'tcx>) {
-        if block.span.from_expansion() {
-            return;
-        }
         let Some(tail) = block.expr else { return };
         let Some(prev) = block.stmts.last() else { return };
 
@@ -102,23 +101,93 @@ impl<'tcx> LateLintPass<'tcx> for BlankLineBeforeReturn {
     }
 }
 
-/// True when `block` is the top-level body of a function — a free `fn`, an
+/// True when `block` is the body the user wrote for a function — a free `fn`, an
 /// inherent or trait-impl method, or a trait method with a default body.
 /// False for every other block context (closures, control-flow branches,
 /// `let` initializers, nested `{ … }` expressions, …).
 ///
-/// Walk: Block → wrapping `ExprKind::Block` Expr → grandparent. For function
-/// bodies the grandparent is the `Fn` item, because `parent_hir_node` skips
-/// through the `Body` wrapper; for everything else it's an Expr/Arm/LetStmt.
+/// Walks from `block` up to the enclosing item, stepping over nodes that the
+/// user did not write. A block only counts as a function body if *everything*
+/// between it and the `fn` is scaffolding:
+///
+/// * `fn foo() { … }` — the block sits directly under the item.
+/// * `async fn foo() { … }` — the body is lowered to a coroutine, burying the
+///   block under `DropTemps` and an extra block: `Item → Closure → Block →
+///   DropTemps → block`.
+/// * `#[tracing::instrument] async fn foo() { … }` — the attribute macro moves
+///   the body into a generated `let fut = async move { … };`, so the block is
+///   additionally wrapped in macro-generated nodes.
+///
+/// Any node the user *did* write (an `if`, a `match` arm, a real `let`, a
+/// hand-written closure or `async` block) stops the walk and yields false.
 fn is_fn_body<'tcx>(cx: &LateContext<'tcx>, block: &Block<'_>) -> bool {
-    let Node::Expr(parent_expr) = cx.tcx.parent_hir_node(block.hir_id) else {
-        return false;
-    };
-    match cx.tcx.parent_hir_node(parent_expr.hir_id) {
-        Node::Item(item) => matches!(item.kind, ItemKind::Fn { .. }),
-        Node::ImplItem(item) => matches!(item.kind, ImplItemKind::Fn(..)),
-        Node::TraitItem(item) => matches!(item.kind, TraitItemKind::Fn(_, TraitFn::Provided(_))),
-        _ => false,
+    let mut hir_id = block.hir_id;
+
+    // Set once the walk steps through macro-generated code, which relaxes the
+    // rule for enclosing blocks below. An attribute macro that moves the body
+    // (`#[tracing::instrument]`) injects its scaffolding *inside* the `fn`'s
+    // original braces, so the block it lands in still has a real span even
+    // though the user did not write that nesting.
+    let mut crossed_expansion = false;
+
+    loop {
+        match cx.tcx.parent_hir_node(hir_id) {
+            Node::Item(item) => return matches!(item.kind, ItemKind::Fn { .. }),
+            Node::ImplItem(item) => return matches!(item.kind, ImplItemKind::Fn(..)),
+            Node::TraitItem(item) => {
+                return matches!(item.kind, TraitItemKind::Fn(_, TraitFn::Provided(_)));
+            },
+            Node::Expr(expr) => {
+                if !is_scaffolding(expr) {
+                    return false;
+                }
+                crossed_expansion |= expr.span.from_expansion();
+                hir_id = expr.hir_id;
+            },
+            // Only climb out of a block the user wrote once inside an expansion;
+            // otherwise this is a plain inner `{ … }` block and stays skipped.
+            Node::Block(outer) => {
+                if !outer.span.from_expansion() && !crossed_expansion {
+                    return false;
+                }
+                hir_id = outer.hir_id;
+            },
+            Node::Stmt(stmt) => {
+                if !stmt.span.from_expansion() && !crossed_expansion {
+                    return false;
+                }
+                hir_id = stmt.hir_id;
+            },
+            // A real `let` means the block is an initializer the user wrote.
+            Node::LetStmt(let_stmt) => {
+                if !let_stmt.span.from_expansion() {
+                    return false;
+                }
+                crossed_expansion = true;
+                hir_id = let_stmt.hir_id;
+            },
+            _ => return false,
+        }
+    }
+}
+
+/// True for a node between a function body block and its `fn` that the user did
+/// not write: the `ExprKind::Block` wrapper every block carries, the `DropTemps`
+/// and coroutine layers of the `async fn` desugaring, and anything a macro
+/// generated.
+fn is_scaffolding(expr: &Expr<'_>) -> bool {
+    match expr.kind {
+        // The wrapper expression a block is always parented by.
+        ExprKind::Block(..) | ExprKind::DropTemps(..) => true,
+        // The coroutine an `async fn` body is lowered into. `is_fn_like` matches
+        // only that desugaring — a hand-written `async { … }` block or async
+        // closure is `CoroutineSource::Block`/`Closure` and is not scaffolding
+        // unless a macro generated it.
+        ExprKind::Closure(closure) => match closure.kind {
+            ClosureKind::Coroutine(kind) => kind.is_fn_like() || expr.span.from_expansion(),
+            _ => expr.span.from_expansion(),
+        },
+        _ => expr.span.from_expansion(),
     }
 }
 
