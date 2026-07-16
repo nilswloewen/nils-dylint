@@ -40,13 +40,29 @@ cargo dylint --path blank_line_before_return -- --manifest-path <target>/Cargo.t
 
 ## Toolchain & deps — these are tightly coupled
 
-- `rust-toolchain` pins **nightly-2026-05-14** with `rustc-dev` +
-  `llvm-tools-preview`. `rustc_private` APIs are unstable; this exact nightly
-  is what the lints compile against.
-- `clippy_utils` is pinned to a **git rev** in each lint's `Cargo.toml`. That
-  rev must be compatible with the pinned nightly — bump them together, never
-  one without the other. Same goes for `dylint_linting` / `dylint_testing`
-  versions when upgrading the nightly.
+- `rust-toolchain` pins **nightly-2026-05-29** (`1.98.0-nightly`) with
+  `rustc-dev` + `llvm-tools-preview`. `rustc_private` APIs are unstable; this
+  exact nightly is what the lints compile against.
+- **Why a 1.98 nightly to lint a 1.97.1 target:** the driver nightly's numeric
+  version must clear the *target workspace's* `rust-version` (MSRV). Every
+  nightly in the 1.97 cycle reports `1.97.0-nightly` → cargo reads `1.97.0`,
+  which is `< 1.97.1`, so a target with `rust-version = "1.97.1"` rejects the
+  driver during `cargo fix`/`cargo dylint`. Only a `1.98.0-nightly` (post
+  branch-cut, `>= 1.97.1`) clears it. nightly-2026-05-29 is the earliest 1.98
+  nightly, so drift from the 1.97.1 target is minimal. (Alternatively the
+  consumer passes `--ignore-rust-version`, but that relaxes MSRV checking for
+  the whole resolve — pinning a 1.98 nightly keeps the check intact and needs
+  no flag.)
+- `clippy_utils` is pinned to a **git rev** in each lint's `Cargo.toml` (rev
+  `e8fdfcc0…`, `0.1.98`). That rev must be compatible with the pinned nightly —
+  bump them together, never one without the other. The rev's own
+  `rust-toolchain.toml` self-documents which nightly it needs (crates.io also
+  publishes `clippy_utils`, but the published version does *not* record its
+  nightly, which is why the git rev is preferred here). Note the ~1-day dist
+  skew: a rev's declared `nightly-YYYY-MM-DD` was built from the *previous*
+  day's rustc, so it often needs the *next* day's dist nightly (e.g. rev
+  declares `2026-05-28` → build against `nightly-2026-05-29`). Same coupling
+  applies to `dylint_linting` / `dylint_testing` when upgrading the nightly.
 - `.cargo/config.toml` forces `linker=dylint-link` for all targets. Without
   it, linking the `cdylib` against rustc's private crates fails. Don't remove
   that flag; if you ever need a different linker for a non-lint binary, scope
