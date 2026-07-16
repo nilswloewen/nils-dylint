@@ -40,7 +40,7 @@ cargo dylint --path blank_line_before_return -- --manifest-path <target>/Cargo.t
 
 ## Toolchain & deps — these are tightly coupled
 
-- `rust-toolchain` pins **nightly-2026-04-16** with `rustc-dev` +
+- `rust-toolchain` pins **nightly-2026-05-14** with `rustc-dev` +
   `llvm-tools-preview`. `rustc_private` APIs are unstable; this exact nightly
   is what the lints compile against.
 - `clippy_utils` is pinned to a **git rev** in each lint's `Cargo.toml`. That

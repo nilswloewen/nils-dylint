@@ -1,6 +1,6 @@
 [package]
 name = "blank_line_before_return"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Nils Loewen <nils@blockrewards.ca>"]
 description = "Require a blank line before single-line `return` statements"
 edition = "2024"
@@ -10,7 +10,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "f6d310692116e9a527ce6d0b3526c965d9c5d7b9" }
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "2ac87a326884a598ea13857588ba9ffc2092b915" }
 dylint_linting = "6.0.1"
 
 [dev-dependencies]

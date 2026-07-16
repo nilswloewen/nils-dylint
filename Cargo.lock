@@ -81,7 +81,7 @@ checksum = "84d7ced0ae9557296835c32bf1b1e02b44c746701f898460fb000d7eaa84f00a"
 
 [[package]]
 name = "blank_line_before_return"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clippy_utils",
  "dylint_linting",
@@ -142,7 +142,7 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "clippy_utils"
 version = "0.1.97"
-source = "git+https://github.com/rust-lang/rust-clippy?rev=f6d310692116e9a527ce6d0b3526c965d9c5d7b9#f6d310692116e9a527ce6d0b3526c965d9c5d7b9"
+source = "git+https://github.com/rust-lang/rust-clippy?rev=2ac87a326884a598ea13857588ba9ffc2092b915#2ac87a326884a598ea13857588ba9ffc2092b915"
 dependencies = [
  "arrayvec",
  "itertools",
